@@ -10,8 +10,9 @@ def main():
         query = sys.argv[1]
     pprint.pprint(scrape(query, "02-09-2018", "03-09-2018", 10))
 
+
 def tweet_to_dict(tweet):
-    return {
+    res = {
                 "username": tweet.username,
                 "id_str": tweet.id,
                 "retweeter": tweet.retweeter,
@@ -19,9 +20,9 @@ def tweet_to_dict(tweet):
                 "author": tweet.author_id,
                 "geo": tweet.geo,
                 "content": {
-                    "text": tweet.text.encode('utf-8'),
+                    "text": tweet.text,
                     #{}"urls": tweet.urls,
-                    "hashtags": tweet.hashtags,
+                    "hashtags": tweet.hashtags
                 },
                 "interactions": {
                     "retweets": tweet.retweets,
@@ -31,6 +32,7 @@ def tweet_to_dict(tweet):
                 "permalink": tweet.permalink,
                 "date": tweet.date
             }
+    return res
 
 def is_eq(t1, t2):
     return t1["id_str"] == t2["id_str"] and t2["retweet_id"] == t1["retweet_id"]

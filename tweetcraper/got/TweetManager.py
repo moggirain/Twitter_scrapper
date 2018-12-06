@@ -1,4 +1,6 @@
-import sys, json, re, datetime
+import sys, re
+import json as jsonlib
+from lxml import etree
 
 if sys.version_info[0] < 3:
 	import cookielib
@@ -10,6 +12,8 @@ else:
 	import urllib.request as rq
 
 from pyquery import PyQuery
+
+# ETPARSER = etree.ETCompatXMLParser()
 
 class Tweet:
 	def __init__(self):
@@ -39,13 +43,16 @@ class TweetManager:
 				break
 
 			refreshCursor = json['min_position']
-			tweets = PyQuery(json['items_html'])('div.js-stream-tweet')
+			text = json["items_html"]
+
+			pq = PyQuery(text, parser='html')
+			tweets = pq('div.js-stream-tweet')
 
 			if len(tweets) == 0:
 				break
 
 			for tweetHTML in tweets:
-				tweetPQ = PyQuery(tweetHTML)
+				tweetPQ = PyQuery(tweetHTML, parser='html_fragments')
 				tweet = Tweet()
 
 				usernameTweet = tweetPQ("data-screen-name")
@@ -74,7 +81,7 @@ class TweetManager:
 				tweet.author_id = author_id
 
 				tweet.text = txt
-				tweet.date = datetime.datetime.fromtimestamp(dateSec)
+				tweet.date = dateSec
 
 				tweet.retweets = retweets
 				tweet.favorites = favorites
@@ -155,6 +162,6 @@ class TweetManager:
 			sys.exit()
 			return
 
-		dataJson = json.loads(jsonResponse.decode('utf-8'))
+		dataJson = jsonlib.loads(jsonResponse.decode())
 
 		return dataJson

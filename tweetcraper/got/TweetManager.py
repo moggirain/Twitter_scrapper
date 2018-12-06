@@ -1,20 +1,33 @@
-import urllib,urllib2,json,re,datetime,sys,cookielib
-from .. import models
+import sys, json, re, datetime
+
+if sys.version_info[0] < 3:
+	import cookielib
+	import urllib2 as rq
+	from urllib import quote as uquote
+else:
+	from urllib.parse import quote as uquote
+	import http.cookiejar as cookielib
+	import urllib.request as rq
+
 from pyquery import PyQuery
 
-class TweetManager:
-	
+class Tweet:
 	def __init__(self):
 		pass
-		
+
+class TweetManager:
+
+	def __init__(self):
+		pass
+
 	@staticmethod
 	def getTweets(tweetCriteria, receiveBuffer=None, bufferLength=100, proxy=None):
 		refreshCursor = ''
-	
+
 		results = []
 		resultsAux = []
 		cookieJar = cookielib.CookieJar()
-		
+
 		if hasattr(tweetCriteria, 'username') and (tweetCriteria.username.startswith("\'") or tweetCriteria.username.startswith("\"")) and (tweetCriteria.username.endswith("\'") or tweetCriteria.username.endswith("\"")):
 			tweetCriteria.username = tweetCriteria.username[1:-1]
 
@@ -25,86 +38,98 @@ class TweetManager:
 			if len(json['items_html'].strip()) == 0:
 				break
 
-			refreshCursor = json['min_position']			
+			refreshCursor = json['min_position']
 			tweets = PyQuery(json['items_html'])('div.js-stream-tweet')
-			
+
 			if len(tweets) == 0:
 				break
-			
+
 			for tweetHTML in tweets:
 				tweetPQ = PyQuery(tweetHTML)
-				tweet = models.Tweet()
-				
-				usernameTweet = tweetPQ("span:first.username.u-dir b").text();
-				txt = re.sub(r"\s+", " ", tweetPQ("p.js-tweet-text").text().replace('# ', '#').replace('@ ', '@'));
-				retweets = int(tweetPQ("span.ProfileTweet-action--retweet span.ProfileTweet-actionCount").attr("data-tweet-stat-count").replace(",", ""));
-				favorites = int(tweetPQ("span.ProfileTweet-action--favorite span.ProfileTweet-actionCount").attr("data-tweet-stat-count").replace(",", ""));
-				dateSec = int(tweetPQ("small.time span.js-short-timestamp").attr("data-time"));
+				tweet = Tweet()
+
+				usernameTweet = tweetPQ("data-screen-name")
+				author_id = tweetPQ("data-user-id")
+				txt = re.sub(r"\s+", " ", tweetPQ("p.js-tweet-text").text().replace('# ', '#').replace('@ ', '@'))
+				retweets = int(tweetPQ("span.ProfileTweet-action--retweet span.ProfileTweet-actionCount").attr("data-tweet-stat-count").replace(",", ""))
+				comments = int(tweetPQ("span.ProfileTweet-action--reply span.ProfileTweet-actionCount").attr("data-tweet-stat-count").replace(",", ""))
+				favorites = int(tweetPQ("span.ProfileTweet-action--favorite span.ProfileTweet-actionCount").attr("data-tweet-stat-count").replace(",", ""))
+				dateSec = int(tweetPQ("small.time span.js-short-timestamp").attr("data-time"))
 				id = tweetPQ.attr("data-tweet-id");
 				permalink = tweetPQ.attr("data-permalink-path");
-				
+
 				geo = ''
 				geoSpan = tweetPQ('span.Tweet-geo')
 				if len(geoSpan) > 0:
 					geo = geoSpan.attr('title')
-				
+
 				tweet.id = id
+				rter = tweetPQ.attr("data-retweeter")
+				rt_id = tweetPQ.attr("data-retweet-id")
+				tweet.retweeter = rter
+				tweet.retweet_id = rt_id
+
 				tweet.permalink = 'https://twitter.com' + permalink
 				tweet.username = usernameTweet
+				tweet.author_id = author_id
+
 				tweet.text = txt
 				tweet.date = datetime.datetime.fromtimestamp(dateSec)
+
 				tweet.retweets = retweets
 				tweet.favorites = favorites
+				tweet.comments = comments
+
 				tweet.mentions = " ".join(re.compile('(@\\w*)').findall(tweet.text))
 				tweet.hashtags = " ".join(re.compile('(#\\w*)').findall(tweet.text))
 				tweet.geo = geo
-				
+
 				results.append(tweet)
 				resultsAux.append(tweet)
-				
+
 				if receiveBuffer and len(resultsAux) >= bufferLength:
 					receiveBuffer(resultsAux)
 					resultsAux = []
-				
+
 				if tweetCriteria.maxTweets > 0 and len(results) >= tweetCriteria.maxTweets:
 					active = False
 					break
-					
-		
+
+
 		if receiveBuffer and len(resultsAux) > 0:
 			receiveBuffer(resultsAux)
-		
+
 		return results
-	
+
 	@staticmethod
 	def getJsonReponse(tweetCriteria, refreshCursor, cookieJar, proxy):
 		url = "https://twitter.com/i/search/timeline?f=tweets&q=%s&src=typd&max_position=%s"
-		
+
 		urlGetData = ''
-		
+
 		if hasattr(tweetCriteria, 'username'):
 			urlGetData += ' from:' + tweetCriteria.username
-		
+
 		if hasattr(tweetCriteria, 'querySearch'):
 			urlGetData += ' ' + tweetCriteria.querySearch
-		
+
 		if hasattr(tweetCriteria, 'near'):
 			urlGetData += "&near:" + tweetCriteria.near + " within:" + tweetCriteria.within
-		
+
 		if hasattr(tweetCriteria, 'since'):
 			urlGetData += ' since:' + tweetCriteria.since
-			
+
 		if hasattr(tweetCriteria, 'until'):
 			urlGetData += ' until:' + tweetCriteria.until
-		
+
 
 		if hasattr(tweetCriteria, 'topTweets'):
 			if tweetCriteria.topTweets:
 				url = "https://twitter.com/i/search/timeline?q=%s&src=typd&max_position=%s"
-		
-		
-		
-		url = url % (urllib.quote(urlGetData), refreshCursor)
+
+
+
+		url = url % (uquote(urlGetData), refreshCursor)
 
 		headers = [
 			('Host', "twitter.com"),
@@ -117,19 +142,19 @@ class TweetManager:
 		]
 
 		if proxy:
-			opener = urllib2.build_opener(urllib2.ProxyHandler({'http': proxy, 'https': proxy}), urllib2.HTTPCookieProcessor(cookieJar))
+			opener = rq.build_opener(rq.ProxyHandler({'http': proxy, 'https': proxy}), rq.HTTPCookieProcessor(cookieJar))
 		else:
-			opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookieJar))
+			opener = rq.build_opener(rq.HTTPCookieProcessor(cookieJar))
 		opener.addheaders = headers
 
 		try:
 			response = opener.open(url)
 			jsonResponse = response.read()
 		except:
-			print "Twitter weird response. Try to see on browser: https://twitter.com/search?q=%s&src=typd" % urllib.quote(urlGetData)
+			sys.stderr.write("Twitter weird response. Try to see on browser: https://twitter.com/search?q={}&src=typd".format(uquote(urlGetData)))
 			sys.exit()
 			return
-		
-		dataJson = json.loads(jsonResponse)
-		
-		return dataJson		
+
+		dataJson = json.loads(jsonResponse.decode('utf-8'))
+
+		return dataJson

@@ -28,7 +28,7 @@ class TweetCriteria:
                         self.near, 
                         self.within))
         if self.since:
-            data.append("since:%s".format.self.since)
+            data.append("since:%s".format(self.since))
         return " ".join(data)
 
     def url(self):

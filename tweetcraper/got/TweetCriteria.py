@@ -7,7 +7,7 @@ class TweetCriteria:
         self.until=end
         self.querySearch=querySearch
         if not maxTweets:
-            maxTweets=0
+            maxTweets=1000000
         self.maxTweets=maxTweets
         self.topTweets=topTweets
         self.near=near

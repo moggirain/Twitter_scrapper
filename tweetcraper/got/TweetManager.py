@@ -1,4 +1,5 @@
 import sys, re
+import progressbar
 import json as jsonlib
 from lxml import etree
 
@@ -16,12 +17,14 @@ from .Tweet import Tweet
 
 # ETPARSER = etree.ETCompatXMLParser()
 
+
 class TweetManager:
     def __init__(self):
         pass
 
     @staticmethod
     def getTweets(tweetCriteria, receiveBuffer=None, bufferLength=100, proxy=None):
+        bar = progressbar.ProgressBar(max_value=tweetCriteria.maxTweets)
         refreshCursor = ''
 
         results = []
@@ -31,6 +34,7 @@ class TweetManager:
         active = True
 
         while active:
+            bar.update(len(results))
             json = TweetManager.getJsonReponse(tweetCriteria, refreshCursor, cookieJar, proxy)
             if len(json['items_html'].strip()) == 0:
                 break

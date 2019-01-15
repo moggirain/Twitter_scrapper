@@ -1,4 +1,4 @@
-import sys, re, os, time
+import sys, re, os, time, random
 import progressbar
 import json as jsonlib
 from lxml import etree
@@ -13,7 +13,7 @@ else:
     import urllib.request as rq
 
 from pyquery import PyQuery
-from .Tweet import Tweet
+from .Tweet import Tweet, tweet_to_dict
 
 # ETPARSER = etree.ETCompatXMLParser()
 
@@ -28,7 +28,7 @@ class TweetManager:
     @staticmethod
     def write_batch(out, data, batchnum):
         with open(os.path.join(out, "batch_{}.json".format(batchnum)), 'w') as outfile:
-            outfile.write(jsonlib.dumps(data))
+            outfile.write(jsonlib.dumps([tweet_to_dict(d) for d in data]))
 
     @staticmethod
     def write_config(out, data):
@@ -57,16 +57,17 @@ class TweetManager:
         active = True
 
         while active:
-            bar.update(len(results))
+            bar.update(len(results) + (tweetCriteria.maxTweets - tweetCriteria.remaining))
             if outdir and len(results) > batchsize:
                 TweetManager.write_batch(outdir, results, batchnum)
                 batchnum += 1
-                TweetCriteria.remaining -= len(results)
+                tweetCriteria.remaining -= len(results)
                 results = []
-                if randsleep:
-                    stime = random.randint(minsleep, maxsleep)
-                    sys.stderr.write("sleeping: {}".format(stime))
-                    time.sleep(stime)
+
+            if randsleep:
+                stime = random.randint(minsleep, maxsleep)
+                #sys.stderr.write("sleeping: {}".format(stime))
+                time.sleep(stime/1000000)
 
 
             json = TweetManager.getJsonReponse(tweetCriteria, refreshCursor, cookieJar, proxy)
@@ -106,7 +107,7 @@ class TweetManager:
         if outdir:
             TweetManager.write_batch(outdir, results, batchnum)
             batchnum += 1
-            TweetCriteria.remaining -= len(results)
+            tweetCriteria.remaining -= len(results)
             results = []
 
         return results

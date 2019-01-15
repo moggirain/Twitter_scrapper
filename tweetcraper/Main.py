@@ -4,6 +4,7 @@ import json
 
 import pprint
 import got
+from got.Tweet import tweet_to_dict
 import argparse
 
 def main():
@@ -48,34 +49,8 @@ def arguments():
     return parser
 
 
-def tweet_to_dict(tweet):
-    #print(tweet.username, tweet.text)
-    res = {
-                "username": tweet.username,
-                "id_str": tweet.id,
-                "retweeter": tweet.retweeter,
-                "retweet_id": tweet.retweet_id,
-                "author": tweet.author_id,
-                "geo": tweet.geo,
-                "content": {
-                    "text": tweet.text,
-                    #{}"urls": tweet.urls,
-                    "hashtags": tweet.hashtags
-                },
-                "interactions": {
-                    "retweets": tweet.retweets,
-                    "mentions": tweet.mentions,
-                    "favorites": tweet.favorites
-                },
-                "permalink": tweet.permalink,
-                "date": tweet.date
-            }
-    return res
-
 def is_eq(t1, t2):
     return t1["id_str"] == t2["id_str"] and t2["retweet_id"] == t1["retweet_id"]
-
-
 
 def scrape(criteria, outdir=None, batchsize=0, randsleep=0):
     tweets_all = got.TweetManager.getTweets(criteria, outdir=outdir, batchsize=batchsize, randsleep=randsleep)

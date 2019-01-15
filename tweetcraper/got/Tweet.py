@@ -90,4 +90,28 @@ class Tweet:
             return geo_span.attr('title')
         return ""
 
+def tweet_to_dict(tweet):
+    #print(tweet.username, tweet.text)
+    res = {
+                "username": tweet.username,
+                "id_str": tweet.id,
+                "retweeter": tweet.retweeter,
+                "retweet_id": tweet.retweet_id,
+                "author": tweet.author_id,
+                "geo": tweet.geo,
+                "content": {
+                    "text": tweet.text,
+                    #{}"urls": tweet.urls,
+                    "hashtags": tweet.hashtags
+                },
+                "interactions": {
+                    "retweets": tweet.retweets,
+                    "mentions": tweet.mentions,
+                    "favorites": tweet.favorites
+                },
+                "permalink": tweet.permalink,
+                "date": tweet.date
+            }
+    return res
+
 

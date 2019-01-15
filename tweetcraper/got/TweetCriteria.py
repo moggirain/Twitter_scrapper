@@ -32,7 +32,6 @@ class TweetCriteria:
             data.append("since:{}".format(self.since))
         if self.until:
             data.append("until:{}".format(self.until))
-        print(data)
         return " ".join(data)
 
     def url(self):

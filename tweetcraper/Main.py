@@ -49,7 +49,7 @@ def arguments():
 
 
 def tweet_to_dict(tweet):
-    print(tweet.username, tweet.text)
+    #print(tweet.username, tweet.text)
     res = {
                 "username": tweet.username,
                 "id_str": tweet.id,
@@ -78,7 +78,7 @@ def is_eq(t1, t2):
 
 
 def scrape(criteria, outdir=None, batchsize=0, randsleep=0):
-    tweets_all = got.TweetManager.getTweets(criteria, outdir, batchsize, randsleep)
+    tweets_all = got.TweetManager.getTweets(criteria, outdir=outdir, batchsize=batchsize, randsleep=randsleep)
     return [tweet_to_dict(t) for t in tweets_all]
 
 if __name__ == '__main__':

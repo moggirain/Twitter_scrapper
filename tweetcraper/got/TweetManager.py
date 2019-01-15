@@ -28,11 +28,11 @@ class TweetManager:
     @staticmethod
     def write_batch(out, data, batchnum):
         with open(os.path.join(out, "batch_{}.json".format(batchnum)), 'w') as outfile:
-            outfile.write(json.dumps(data))
+            outfile.write(jsonlib.dumps(data))
 
     @staticmethod
     def write_config(out, data):
-        with open(os.path.join(out, "config.txt", 'w')) as outfile:
+        with open(os.path.join(out, "config.txt"), 'w') as outfile:
             outfile.write(data)
 
     def __init__(self):
@@ -40,7 +40,7 @@ class TweetManager:
 
     @staticmethod
     def getTweets(tweetCriteria, receiveBuffer=None, bufferLength=100, proxy=None, outdir=None, batchsize=1000, randsleep=0):
-        #bar = progressbar.ProgressBar(max_value=tweetCriteria.maxTweets)
+        bar = progressbar.ProgressBar(max_value=tweetCriteria.maxTweets)
         refreshCursor = ''
 
         results = []
@@ -48,8 +48,8 @@ class TweetManager:
         cookieJar = cookielib.CookieJar()
         if outdir:
             TweetManager.make_outdir(outdir)
-            TweetManager.write_config(outdir, TweetCriteria.get_data)
-        batchnum = 0
+            TweetManager.write_config(outdir, tweetCriteria.get_data())
+            batchnum = 0
         if randsleep:
             minsleep = randsleep - randsleep // 10
             maxsleep = randsleep + randsleep // 10
@@ -57,9 +57,9 @@ class TweetManager:
         active = True
 
         while active:
-            #bar.update(len(results))
+            bar.update(len(results))
             if outdir and len(results) > batchsize:
-                TweetManager.write_batch(out, results, batchnum)
+                TweetManager.write_batch(outdir, results, batchnum)
                 batchnum += 1
                 TweetCriteria.remaining -= len(results)
                 results = []
@@ -71,7 +71,7 @@ class TweetManager:
 
             json = TweetManager.getJsonReponse(tweetCriteria, refreshCursor, cookieJar, proxy)
             if len(json['items_html'].strip()) == 0:
-                print("nothing found in items")
+                #print("nothing found in items")
                 sys.stderr.write(jsonlib.dumps(json))
                 break
 
@@ -82,7 +82,7 @@ class TweetManager:
             tweets = pq('div.js-stream-tweet')
 
             if len(tweets) == 0:
-                print("\n\n\nno tweets found :(")
+                #print("\n\n\nno tweets found :(")
                 break
 
             for tweetHTML in tweets:
@@ -102,6 +102,12 @@ class TweetManager:
 
         if receiveBuffer and len(resultsAux) > 0:
             receiveBuffer(resultsAux)
+
+        if outdir:
+            TweetManager.write_batch(outdir, results, batchnum)
+            batchnum += 1
+            TweetCriteria.remaining -= len(results)
+            results = []
 
         return results
 
@@ -126,6 +132,7 @@ class TweetManager:
             opener = rq.build_opener(rq.HTTPCookieProcessor(cookieJar))
         opener.addheaders = headers
         try:
+            #print( url )
             response = opener.open(url)
             jsonResponse = response.read()
         except Exception as e:

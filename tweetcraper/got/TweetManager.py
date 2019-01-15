@@ -1,4 +1,4 @@
-import sys, re
+import sys, re, os, time
 import progressbar
 import json as jsonlib
 from lxml import etree
@@ -19,24 +19,60 @@ from .Tweet import Tweet
 
 
 class TweetManager:
+    @staticmethod
+    def make_outdir(name):
+        if os.path.isdir(name):
+            raise ValueError("Output directory {} exists.  Pick another".format(name))
+        os.mkdir(name)
+
+    @staticmethod
+    def write_batch(out, data, batchnum):
+        with open(os.path.join(out, "batch_{}.json".format(batchnum)), 'w') as outfile:
+            outfile.write(json.dumps(data))
+
+    @staticmethod
+    def write_config(out, data):
+        with open(os.path.join(out, "config.txt", 'w')) as outfile:
+            outfile.write(data)
+
     def __init__(self):
         pass
 
     @staticmethod
-    def getTweets(tweetCriteria, receiveBuffer=None, bufferLength=100, proxy=None):
-        bar = progressbar.ProgressBar(max_value=tweetCriteria.maxTweets)
+    def getTweets(tweetCriteria, receiveBuffer=None, bufferLength=100, proxy=None, outdir=None, batchsize=1000, randsleep=0):
+        #bar = progressbar.ProgressBar(max_value=tweetCriteria.maxTweets)
         refreshCursor = ''
 
         results = []
         resultsAux = []
         cookieJar = cookielib.CookieJar()
+        if outdir:
+            TweetManager.make_outdir(outdir)
+            TweetManager.write_config(outdir, TweetCriteria.get_data)
+        batchnum = 0
+        if randsleep:
+            minsleep = randsleep - randsleep // 10
+            maxsleep = randsleep + randsleep // 10
 
         active = True
 
         while active:
-            bar.update(len(results))
+            #bar.update(len(results))
+            if outdir and len(results) > batchsize:
+                TweetManager.write_batch(out, results, batchnum)
+                batchnum += 1
+                TweetCriteria.remaining -= len(results)
+                results = []
+                if randsleep:
+                    stime = random.randint(minsleep, maxsleep)
+                    sys.stderr.write("sleeping: {}".format(stime))
+                    time.sleep(stime)
+
+
             json = TweetManager.getJsonReponse(tweetCriteria, refreshCursor, cookieJar, proxy)
             if len(json['items_html'].strip()) == 0:
+                print("nothing found in items")
+                sys.stderr.write(jsonlib.dumps(json))
                 break
 
             refreshCursor = json['min_position']
@@ -46,6 +82,7 @@ class TweetManager:
             tweets = pq('div.js-stream-tweet')
 
             if len(tweets) == 0:
+                print("\n\n\nno tweets found :(")
                 break
 
             for tweetHTML in tweets:
@@ -59,7 +96,7 @@ class TweetManager:
                     receiveBuffer(resultsAux)
                     resultsAux = []
 
-                if tweetCriteria.maxTweets > 0 and len(results) >= tweetCriteria.maxTweets:
+                if tweetCriteria.remaining > 0 and len(results) >= tweetCriteria.remaining:
                     active = False
                     break
 
@@ -88,14 +125,12 @@ class TweetManager:
         else:
             opener = rq.build_opener(rq.HTTPCookieProcessor(cookieJar))
         opener.addheaders = headers
-
         try:
             response = opener.open(url)
             jsonResponse = response.read()
-        except:
+        except Exception as e:
             sys.stderr.write("Twitter weird response. Try to see on browser: https://twitter.com/search?q={}&src=typd".format(uquote(data)))
             sys.exit()
-            return
 
         dataJson = jsonlib.loads(jsonResponse.decode())
 

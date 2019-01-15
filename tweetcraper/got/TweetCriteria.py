@@ -9,6 +9,7 @@ class TweetCriteria:
         if not maxTweets:
             maxTweets=1000000
         self.maxTweets=maxTweets
+        self.remaining = self.maxTweets
         self.topTweets=topTweets
         self.near=near
         self.within=within
@@ -19,16 +20,19 @@ class TweetCriteria:
     def get_data(self):
         data = []
         if self.username:
-            data.append("from:%s".format(self.username))
+            data.append("from:{}".format(self.username))
         if self.querySearch:
             data.append(self.querySearch)
         if self.near and self.within:
             data.append(
-                    "&near:%s within:%s".format(
+                    "&near:{} within:{}".format(
                         self.near, 
                         self.within))
         if self.since:
-            data.append("since:%s".format(self.since))
+            data.append("since:{}".format(self.since))
+        if self.until:
+            data.append("until:{}".format(self.until))
+        print(data)
         return " ".join(data)
 
     def url(self):

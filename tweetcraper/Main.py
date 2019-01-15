@@ -17,7 +17,7 @@ def main():
             within=args.within,
             querySearch=" ".join(args.querySearch),
             topTweets=args.topTweets)
-    return scrape(tc)
+    return scrape(tc, args.outdir, args.batchsize, args.randsleep)
 
 def arguments():
     parser = argparse.ArgumentParser(description="scrape tweets via twitter website")
@@ -28,7 +28,10 @@ def arguments():
         "--end": ("get tweets before time", str),
         "--max": ("get at most max tweets", int),
         "--near": ("get tweets near a location", str),
-        "--within": ("get tweets within a distance", str)
+        "--within": ("get tweets within a distance", str),
+        "--outdir": ("specify an output directory", str),
+        "--batchsize": ("specify a batch size", int),
+        "--randsleep": ("specify a randsleep amount (within 10% of given amount)", int)
     }
 
     for k, var in args.items():
@@ -74,8 +77,8 @@ def is_eq(t1, t2):
 
 
 
-def scrape(criteria):
-    tweets_all = got.TweetManager.getTweets(criteria)
+def scrape(criteria, outdir=None, batchsize=0, randsleep=0):
+    tweets_all = got.TweetManager.getTweets(criteria, outdir, batchsize, randsleep)
     return [tweet_to_dict(t) for t in tweets_all]
 
 if __name__ == '__main__':

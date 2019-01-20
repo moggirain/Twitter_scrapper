@@ -11,8 +11,10 @@ class Tweet:
         self.favorites = Tweet.get_favorites(pq)
         self.comments = Tweet.get_comments(pq)
 
-        self.mentions = " ".join(re.compile('(@\\w*)').findall(self.text))
+        self.mentions = Tweet.get_mentions(pq)
         self.hashtags = " ".join(re.compile('(#\\w*)').findall(self.text))
+        self.quotes = Tweet.get_quoted_tweet(pq)
+        self.conversation = Tweet.get_conversation_id(pq)
 
         self.geo = Tweet.get_geospan(pq)
         self.date = Tweet.get_date(pq)
@@ -25,8 +27,13 @@ class Tweet:
     
     @staticmethod
     def get_username(pq):
-        return pq("span:first.username.u-dir b").text()
-
+        #return pq("span:first.username.u-dir b").text()
+        return pq.attr('data-screen-name')
+    
+    @staticmethod
+    def get_conversation_id(pq):
+        return pq.attr('data-conversation-id')
+        
     @staticmethod
     def get_authorid(pq):
         return pq.attr("data-user-id")
@@ -36,9 +43,17 @@ class Tweet:
         return pq.attr("data-retweeter")
 
     @staticmethod
+    def get_mentions(pq):
+        mentions = pq.attr('data-mentions')
+        if mentions:
+            return mentions.split(" ")
+        return []
+
+    @staticmethod
     def get_quoted_tweet(pq):
         """Quoted tweets look different to retweets"""
-        pass
+        res = pq("a.QuoteTweet-link").attr('href')
+        return res
 
     @staticmethod
     def get_retweetid(pq):
@@ -102,7 +117,9 @@ def tweet_to_dict(tweet):
                 "content": {
                     "text": tweet.text,
                     #{}"urls": tweet.urls,
-                    "hashtags": tweet.hashtags
+                    "hashtags": tweet.hashtags,
+                    "quotes": tweet.quotes,
+                    "conversation": tweet.conversation
                 },
                 "interactions": {
                     "retweets": tweet.retweets,
